@@ -370,12 +370,12 @@ function pressIng(key){
       f.changed=true; const extra=pick(sh.L.pool||INGKEYS);
       f.order.push(extra); f.reveal=Math.max(f.reveal,2.5);
       ticker={t:f.arch.name+': "ACTUALLY— add '+ING[extra].n+'. I contain multitudes."',time:3};
-      addStress(2); S.buzz();
+      addStress(4); S.buzz(); // andy does NOT handle surprises
     }
   } else {
     // wrong = dump the whole cup
     sh.cup=[]; f.idx=0; S.wrong(); sh.shake=0.35;
-    let hit = 6 * (sh.L.debra?2:1);
+    let hit = 9 * (sh.L.debra?2:1);
     addStress(hit); state.stats.dumped++;
     floats.push({x:LY.cx,y:LY.cy,t:'WRONG! START OVER '+(sh.L.debra?'(DEB SAW ×2)':''),c:'#ff6655',life:1.4});
     if(f.arch.film){ addStress(3); ticker={t:"MADISYN: 'chat, he's struggling. like AND subscribe.'",time:2.5}; }
@@ -386,13 +386,13 @@ function serveCust(f){
   S.serve();
   const tip = Math.max(0.25, Math.round((f.order.length*0.75 + f.pat*2.5)*4)/4);
   state.tips+=tip; state.stats.tips+=tip; state.stats.served++;
-  addStress(f.arch.joe? -10 : -3);
+  addStress(f.arch.joe? -8 : -2);
   f.st='leave'; f.quip=pick(f.arch.bye); f.quipT=3;
   ticker={t:f.arch.name+': "'+f.quip+'"', time:2.8};
   sh.cup=[]; updateCup();
   floats.push({x:f.x,y:LY.bubY+30,t:'+$'+tip.toFixed(2),c:'#7ddc7d',life:1.3});
   setTimeout(S.tip,120);
-  if(f.arch.joe) floats.push({x:f.x,y:LY.bubY,t:'bless him  −10 stress',c:'#9ad0ff',life:1.6});
+  if(f.arch.joe) floats.push({x:f.x,y:LY.bubY,t:'bless him  −8 stress',c:'#9ad0ff',life:1.6});
 }
 function addStress(n){
   state.stress = Math.max(0, Math.min(100, state.stress+n));
@@ -423,8 +423,8 @@ $('tcbtn').addEventListener('click',()=>{
   if(!sh||!sh.card) return;
   const spence = sh.card.tx.from.includes('SPENCER');
   state.stats.texts++;
-  addStress(spence? -2 : -8);
-  floats.push({x:LY.cx,y:LY.cy+40,t:spence?'declined golf, again  −2':'family = serotonin  −8',c:'#7ddc7d',life:1.6});
+  addStress(spence? -2 : -6);
+  floats.push({x:LY.cx,y:LY.cy+40,t:spence?'declined golf, again  −2':'family = serotonin  −6',c:'#7ddc7d',life:1.6});
   if(spence) state.stats.declined++;
   sh.lock=0.9; dismissCard(); S.serve();
 });
@@ -463,8 +463,8 @@ function update(dt){
   if(sh.textq.length && !sh.card){ sh.textT-=dt; if(sh.textT<=0){ showCard(sh.textq.shift()); sh.textT=rnd(16,26); } }
   if(sh.card){ sh.card.t-=dt; $('tcringf').style.width=Math.max(0,sh.card.t/7*100)+'%';
     if(sh.card.t<=0){ const spence=sh.card.tx.from.includes('SPENCER'); dismissCard(true);
-      addStress(spence?6:12); S.wrong();
-      floats.push({x:LY.cx,y:LY.cy+40,t:spence?'ignored spencer +6':'IGNORED FAMILY +12 GUILT',c:'#ff6655',life:1.8}); } }
+      addStress(spence?6:14); S.wrong();
+      floats.push({x:LY.cx,y:LY.cy+40,t:spence?'ignored spencer +6':'IGNORED FAMILY +14 GUILT',c:'#ff6655',life:1.8}); } }
 
   // customers: walk in from the right, queue extends right of the counter
   let qi=0;
@@ -483,8 +483,8 @@ function update(dt){
         c.st='leave'; c.quip=pick(c.arch.mad); c.quipT=3;
         ticker={t:c.arch.name+': "'+c.quip+'"', time:3};
         if(c.spencer){ floats.push({x:c.x,y:LY.bubY+20,t:'"must be hard, bro."',c:'#e8b04b',life:2.4}); }
-        else { S.walkout(); addStress(15*(L.debra?1.5:1)); state.stats.walkouts++; sh.shake=0.3;
-          floats.push({x:c.x,y:LY.bubY+20,t:'WALKOUT +15',c:'#ff6655',life:1.5});
+        else { S.walkout(); addStress(18*(L.debra?1.5:1)); state.stats.walkouts++; sh.shake=0.3;
+          floats.push({x:c.x,y:LY.bubY+20,t:'WALKOUT +18',c:'#ff6655',life:1.5});
           if(frontCust()===undefined){ sh.cup=[]; updateCup(); } }
       } } }
   sh.custs = sh.custs.filter(c=>!(c.st==='leave'&&c.x>W+80));
@@ -492,8 +492,15 @@ function update(dt){
   const f=frontCust();
   if(f && sh.cup.length!==f.idx){ sh.cup=f.order.slice(0,f.idx); updateCup(); }
 
-  // idle stress decay
-  if(!f) addStress(-0.9*dt);
+  // being perceived is stressful: every waiting customer radiates pressure
+  const waiting = sh.custs.filter(c=>c.st==='wait').length;
+  if(waiting>0) addStress(0.3*waiting*dt);
+  else addStress(-0.5*dt); // andy recovers slowly, and only when unobserved
+
+  // andy's internal monologue at stress thresholds (one-shot per shift)
+  if(!sh.sq50 && state.stress>=50){ sh.sq50=1; ticker={t:"ANDY (internally): I'm fine. this is fine. everything is foam.",time:2.6}; }
+  if(!sh.sq75 && state.stress>=75){ sh.sq75=1; ticker={t:"ANDY: the beeping. does anyone else HEAR the beeping??",time:2.6}; S.buzz(); }
+  if(!sh.sq90 && state.stress>=90){ sh.sq90=1; ticker={t:"ANDY: [internal screaming intensifies]",time:2.6}; S.buzz(); }
 
   // debra pacing
   if(L.debra){ sh.debraX += sh.debraDir*30*dt; if(sh.debraX<LY.debMin){sh.debraDir=1;} if(sh.debraX>LY.debMax){sh.debraDir=-1;} }
