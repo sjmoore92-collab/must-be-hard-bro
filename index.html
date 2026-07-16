@@ -288,27 +288,27 @@ const FINE = [
 
 /* ---------- levels ---------- */
 const LEVELS = [
-  { day:'MONDAY', sub:'OPENING SHIFT', dur:70, spawn:[6.5,9], drain:0.026, len:[2,3],
+  { day:'MONDAY', sub:'OPENING SHIFT', dur:30, spawn:[6.5,9], drain:0.026, len:[2,3],
     pool:['shot','milk','foam','ice'], archs:['joe','bro','laptop'], texts:[FAMTEXTS[0]],
     nameOnly:0, change:0, memory:0, wave:0,
     intro:"First shift of the week. The machine is warm. You are not ready. No one is ever ready." },
-  { day:'TUESDAY', sub:'THE DEBORAH INCIDENT', dur:75, spawn:[5.5,8], drain:0.031, len:[3,4],
+  { day:'TUESDAY', sub:'THE DEBORAH INCIDENT', dur:30, spawn:[5.5,8], drain:0.031, len:[3,4],
     pool:['shot','milk','foam','ice','car'], archs:['joe','bro','laptop','karen','mom'], texts:[FAMTEXTS[1],FAMTEXTS[2]],
     nameOnly:0, change:0.15, memory:0, wave:0,
     intro:"Deborah is coming. You can feel it in the foam. She documented last time." },
-  { day:'WEDNESDAY', sub:'RUSH HOUR', dur:80, spawn:[5,7.5], drain:0.035, len:[3,5],
+  { day:'WEDNESDAY', sub:'RUSH HOUR', dur:30, spawn:[5,7.5], drain:0.035, len:[3,5],
     pool:['shot','milk','foam','ice','car','oat'], archs:['joe','bro','laptop','karen','mom','cop'], texts:[FAMTEXTS[3],FAMTEXTS[4]],
     nameOnly:0, change:0.3, memory:0, wave:1,
     intro:"There's a bus stop outside. At some point the bus arrives. Pray it's empty. It won't be." },
-  { day:'THURSDAY', sub:'CONTENT DAY', dur:85, spawn:[4.5,7], drain:0.04, len:[4,5],
+  { day:'THURSDAY', sub:'CONTENT DAY', dur:30, spawn:[4.5,7], drain:0.04, len:[4,5],
     pool:['shot','milk','foam','ice','car','oat','whip'], archs:['bro','karen','mom','teen','influencer','laptop'], texts:[FAMTEXTS[5]],
     nameOnly:0.3, change:0.3, memory:5, wave:0,
     intro:"Madisyn is filming today. Also, regulars now order BY NAME — the chalkboard knows the recipes. And your memory? Getting tested. Orders fade. Tap a customer to ask again (they hate it)." },
-  { day:'FRIDAY', sub:'INSPECTION DAY', dur:90, spawn:[4,6.5], drain:0.045, len:[4,6],
+  { day:'FRIDAY', sub:'INSPECTION DAY', dur:30, spawn:[4,6.5], drain:0.045, len:[4,6],
     pool:INGKEYS, archs:['joe','bro','karen','mom','teen','influencer','cop'], texts:[FAMTEXTS[6]],
     nameOnly:0.35, change:0.35, memory:4.5, wave:1, debra:true,
     intro:"DEB is on the floor with a clipboard. Every mistake counts DOUBLE. She can hear foam being wrong." },
-  { day:'SATURDAY', sub:'THE TEE TIME', dur:100, spawn:[3.5,5.5], drain:0.052, len:[4,6],
+  { day:'SATURDAY', sub:'THE TEE TIME', dur:30, spawn:[3.5,5.5], drain:0.052, len:[4,6],
     pool:INGKEYS, archs:['joe','bro','karen','mom','teen','influencer','cop','laptop'], texts:[FAMTEXTS[7],SPENCETEXTS[0],SPENCETEXTS[1]],
     nameOnly:0.4, change:0.4, memory:4, wave:2, spencer:true,
     intro:"8:40am tee time. 8:00am church crowd. Somewhere, Spencer is stretching alone. Tonight: family dinner. The Thing. Survive." },
@@ -327,7 +327,7 @@ let sh = null;
 function startShift(i){
   const L = LEVELS[i];
   state.lvl = i; state.stress = Math.min(state.stress, 40); saveProg();
-  sh = { L, t:L.dur, custs:[], spawnT:2.5, cup:[], lock:0, textq:[...L.texts], textT:rnd(14,22),
+  sh = { L, t:L.dur, custs:[], spawnT:2, cup:[], lock:0, textq:[...L.texts], textT:rnd(5,10),
          card:null, waveDone:0, spencerDone:false, shake:0, debraX:LY?LY.debInit:640, debraDir:-1, over:false };
   ticker = {t: L.day+' — '+L.sub, time:4};
   hideAll(); phase='shift'; updateCup();
@@ -460,7 +460,7 @@ function update(dt){
     ticker={t:"...is that SPENCER? in golf pants? in the LINE?",time:3.5};
   }
   // texts
-  if(sh.textq.length && !sh.card){ sh.textT-=dt; if(sh.textT<=0){ showCard(sh.textq.shift()); sh.textT=rnd(16,26); } }
+  if(sh.textq.length && !sh.card){ sh.textT-=dt; if(sh.textT<=0){ showCard(sh.textq.shift()); sh.textT=rnd(7,11); } }
   if(sh.card){ sh.card.t-=dt; $('tcringf').style.width=Math.max(0,sh.card.t/7*100)+'%';
     if(sh.card.t<=0){ const spence=sh.card.tx.from.includes('SPENCER'); dismissCard(true);
       addStress(spence?6:14); S.wrong();
