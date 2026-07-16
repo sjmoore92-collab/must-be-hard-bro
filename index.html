@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>MUST BE HARD, BRO™ — A Barista Stress Simulator</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:#14100e; color:#f2e8dc; font-family:"Courier New",monospace; overflow:hidden; touch-action:manipulation; }
+  #wrap { max-width:980px; margin:0 auto; height:100%; display:flex; flex-direction:column; padding:4px; }
+  #cvbox { position:relative; width:100%; flex:0 1 auto; }
+  canvas { width:100%; display:block; border-radius:10px; background:#2a1f18; }
+  #controls { flex:0 0 auto; padding-top:6px; }
+  #cuprow { display:flex; align-items:center; gap:8px; min-height:34px; padding:2px 6px; }
+  #cupicons { font-size:20px; letter-spacing:3px; min-height:26px; }
+  #cuplabel { font-size:11px; color:#c9a876; font-weight:bold; }
+  #menubtn { margin-left:auto; background:#3b2c20; color:#e8cfa8; border:2px solid #6b5238; border-radius:8px; font-family:inherit; font-weight:bold; font-size:12px; padding:5px 10px; cursor:pointer; }
+  #pad { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .ing { background:#3b2c20; border:2px solid #6b5238; border-radius:10px; color:#f2e8dc; font-family:inherit; font-weight:bold; font-size:13px; padding:10px 2px; cursor:pointer; user-select:none; transition:transform .05s; }
+  .ing:active { transform:scale(.93); background:#54402c; }
+  .ing .e { font-size:20px; display:block; }
+  .ovl { position:absolute; inset:0; background:rgba(12,8,6,.94); display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:18px; border-radius:10px; overflow-y:auto; z-index:10; }
+  .ovl.show { display:flex; }
+  h1 { font-size:clamp(26px,6vw,46px); letter-spacing:2px; color:#e8b04b; text-shadow:3px 3px 0 #000; }
+  h2 { color:#e8b04b; margin-bottom:10px; }
+  .sub { color:#c9a876; margin:8px 0 16px; font-size:14px; }
+  .btn { background:#e8b04b; color:#241505; border:none; border-radius:10px; font-family:inherit; font-weight:bold; font-size:17px; padding:13px 26px; cursor:pointer; margin:6px; box-shadow:0 4px 0 #8a6420; }
+  .btn:active { transform:translateY(3px); box-shadow:0 1px 0 #8a6420; }
+  .btn.ghost { background:#3b2c20; color:#e8cfa8; box-shadow:0 4px 0 #1d1610; }
+  .fine { font-size:10px; color:#7a6a56; margin-top:18px; max-width:460px; line-height:1.5; }
+  /* phone / chat */
+  .phone { width:min(360px,92%); background:#101418; border:3px solid #2c3540; border-radius:22px; padding:14px 12px; text-align:left; }
+  .phead { text-align:center; font-size:12px; color:#8fa3b8; border-bottom:1px solid #2c3540; padding-bottom:8px; margin-bottom:10px; font-weight:bold; }
+  .bub { max-width:85%; padding:8px 11px; border-radius:14px; margin:6px 0; font-size:13px; line-height:1.45; }
+  .them { background:#25303c; color:#dbe7f2; border-bottom-left-radius:4px; }
+  .me { background:#2e7d4f; color:#eafff2; margin-left:auto; border-bottom-right-radius:4px; }
+  .copt { display:block; width:100%; text-align:left; background:#1a222b; color:#cfe0f0; border:2px solid #34424f; border-radius:12px; font-family:inherit; font-size:13px; padding:9px 11px; margin:6px 0; cursor:pointer; }
+  .copt:active { background:#26333f; }
+  /* in-shift text card */
+  #textcard { position:absolute; right:8px; bottom:8px; width:min(300px,70%); background:#101418; border:2px solid #3a4855; border-radius:14px; padding:10px; display:none; z-index:8; box-shadow:0 6px 20px rgba(0,0,0,.6); }
+  #textcard.show { display:block; animation:slidein .25s; }
+  @keyframes slidein { from { transform:translateY(20px); opacity:0; } }
+  #tcfrom { font-size:11px; font-weight:bold; color:#8fa3b8; }
+  #tcmsg { font-size:13px; color:#dbe7f2; margin:6px 0 8px; line-height:1.4; }
+  #tcbtn { width:100%; background:#2e7d4f; color:#eafff2; border:none; border-radius:9px; font-family:inherit; font-weight:bold; font-size:13px; padding:8px; cursor:pointer; }
+  #tcring { height:4px; background:#26333f; border-radius:3px; margin-top:8px; overflow:hidden; }
+  #tcringf { height:100%; background:#e8b04b; width:100%; }
+  /* menu board overlay */
+  #board { position:absolute; left:8px; bottom:8px; background:#1e2a1e; border:3px solid #4a5e3a; border-radius:12px; padding:10px 14px; display:none; z-index:8; font-size:12px; line-height:1.7; color:#d8e8c8; box-shadow:0 6px 20px rgba(0,0,0,.6); }
+  #board.show { display:block; }
+  #board b { color:#f0e6a0; }
+  .statline { font-size:13px; color:#c9a876; margin:3px 0; }
+  #endstage { position:relative; width:min(420px,94%); height:150px; margin:10px 0; }
+  #golfbtn { position:absolute; left:8%; top:30px; }
+  #fambtn { position:absolute; right:8%; top:30px; }
+  .stamp { display:inline-block; border:4px solid #d33; color:#d33; font-size:clamp(18px,4.5vw,30px); font-weight:bold; padding:8px 18px; transform:rotate(-7deg); letter-spacing:2px; margin:14px 0; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="cvbox">
+    <canvas id="cv" width="900" height="520"></canvas>
+
+    <div id="textcard">
+      <div id="tcfrom"></div>
+      <div id="tcmsg"></div>
+      <button id="tcbtn"></button>
+      <div id="tcring"><div id="tcringf"></div></div>
+    </div>
+
+    <div id="board"></div>
+
+    <div class="ovl show" id="menu">
+      <h1>MUST BE HARD, BRO™</h1>
+      <div class="sub">A Barista Stress Simulator &nbsp;·&nbsp; DIFFICULTY: YES</div>
+      <div class="sub" style="max-width:480px">You are <b>ANDY</b>. Six shifts at Brewtal Grounds stand between you<br>and the weekend. Spencer keeps texting about a tee time.<br>Your family keeps texting about being a family.<br><b>The milk steamer does not care about any of it.</b></div>
+      <button class="btn" id="startbtn">CLOCK IN</button>
+      <button class="btn ghost" id="contbtn" style="display:none">CONTINUE SHIFT</button>
+      <div class="fine" id="menufine"></div>
+    </div>
+
+    <div class="ovl" id="inter"></div>
+
+    <div class="ovl" id="fail">
+      <h2 id="failtitle"></h2>
+      <div class="sub" id="failsub"></div>
+      <div class="sub" style="max-width:440px;border:1px dashed #6b5238;padding:10px;border-radius:8px"><b style="color:#e8b04b">☕ BARISTA WISDOM:</b><br><span id="failtip"></span></div>
+      <button class="btn" id="retrybtn">RE-TIE APRON</button>
+    </div>
+
+    <div class="ovl" id="end"></div>
+  </div>
+
+  <div id="controls">
+    <div id="cuprow">
+      <span id="cuplabel">CUP:</span><span id="cupicons"></span>
+      <button id="menubtn">📋 MENU BOARD</button>
+    </div>
+    <div id="pad"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= MUST BE HARD, BRO™ ================= */
+const cv = document.getElementById('cv'), cx = cv.getContext('2d');
+const W = 900, H = 520;
+const $ = id => document.getElementById(id);
+const rnd = (a,b)=>a+Math.random()*(b-a);
+const ri = (a,b)=>Math.floor(rnd(a,b+1));
+const pick = a=>a[Math.floor(Math.random()*a.length)];
+
+/* ---------- audio ---------- */
+let AC=null;
+function ac(){ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended')AC.resume(); return AC; }
+function beep(f,d,type,vol,slide){ try{ const a=ac(),o=a.createOscillator(),g=a.createGain();
+  o.type=type||'square'; o.frequency.value=f; if(slide)o.frequency.linearRampToValueAtTime(slide,a.currentTime+d);
+  g.gain.setValueAtTime(vol||0.08,a.currentTime); g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+d);
+  o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+d);}catch(e){} }
+function hiss(d,vol){ try{ const a=ac(),n=a.createBufferSource(),b=a.createBuffer(1,a.sampleRate*d,a.sampleRate),dt=b.getChannelData(0);
+  for(let i=0;i<dt.length;i++)dt[i]=(Math.random()*2-1)*(1-i/dt.length);
+  const g=a.createGain(); g.gain.value=vol||0.05; n.buffer=b; n.connect(g); g.connect(a.destination); n.start();}catch(e){} }
+const S = {
+  press:()=>{beep(300,.05,'square',.04); hiss(.12,.03);},
+  serve:()=>{beep(660,.09,'square',.07); setTimeout(()=>beep(880,.14,'square',.07),80);},
+  tip:()=>{hiss(.05,.05); beep(1320,.12,'triangle',.09); setTimeout(()=>beep(1760,.18,'triangle',.08),60);},
+  wrong:()=>{beep(180,.22,'sawtooth',.09,90); hiss(.25,.06);},
+  walkout:()=>{beep(240,.15,'square',.06,140);},
+  buzz:()=>{beep(120,.09,'square',.09); setTimeout(()=>beep(120,.09,'square',.09),150);},
+  melt:()=>{[440,392,330,262,196].forEach((f,i)=>setTimeout(()=>beep(f,.3,'sawtooth',.09),i*180)); hiss(1.2,.08);},
+  win:()=>{[523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.22,'square',.08),i*130));},
+  peek:()=>beep(980,.06,'triangle',.06),
+};
+
+/* ---------- ingredients ---------- */
+const ING = {
+  shot:{e:'☕',n:'SHOT'},   decaf:{e:'😴',n:'DECAF'}, milk:{e:'🥛',n:'MILK'},  oat:{e:'🌾',n:'OAT MLK'},
+  foam:{e:'☁️',n:'FOAM'},  ice:{e:'🧊',n:'ICE'},     car:{e:'🍯',n:'CARAMEL'}, whip:{e:'🍦',n:'WHIP'},
+};
+const INGKEYS = Object.keys(ING);
+
+/* named drinks on the chalkboard (name-only orders reference these) */
+const BOARD = [
+  {n:'FLAT WHITE', r:['shot','milk']},
+  {n:'CAPPUCCINO', r:['shot','milk','foam']},
+  {n:'ICED LATTE', r:['ice','shot','milk']},
+  {n:'CARAMEL MAC', r:['shot','milk','car','foam']},
+  {n:'THE DEBORAH', r:['decaf','oat','foam','whip']},
+  {n:'THE ANDY', r:['shot','shot','shot']},
+  {n:'AFFOGATO BRO', r:['shot','ice','whip','car']},
+];
+
+/* ---------- customer archetypes ---------- */
+const ARCH = {
+  joe:{ name:'REGULAR JOE', skin:'#e8b088', shirt:'#5a6a72', hair:'#cccccc', pat:1.7, joe:true,
+    hi:["Coffee. Black. Like my ex-wife's heart.","Just coffee. The bean's version, not whatever that ☁️ thing is.","Coffee. I've ordered it since 1974. Don't make it weird."],
+    bye:["Attaboy.","You're the only one here who gets it.","*leaves exact change and a firm nod*"],
+    mad:["...I'll make it at home. Like I should have."] },
+  bro:{ name:'KYLE', skin:'#e8b088', shirt:'#ff5533', hair:'#332211', pat:1.0,
+    hi:["Bro. BRO. Do you do a pre-workout affogato.","Extra shots. It's legs day. The legs know.","Wait... were you at that courthouse thing? Weird week, bro."],
+    bye:["GAINS.","You're him. You're actually him.","*chugs it like a protein shake*"],
+    mad:["Cardio it is then. YOUR fault."] },
+  karen:{ name:'DEBORAH', skin:'#f0c0a0', shirt:'#c05a8a', hair:'#e8d060', pat:0.62,
+    hi:["I'd like to speak to— oh, you're new. Even better.","Last time the foam was WRONG. I documented it.","My drink. You know the one. Everyone knows the one."],
+    bye:["Hm. Adequate. I'm still leaving a review.","This is ALMOST what I asked for, which is the same as wrong, but fine.","*sniffs it suspiciously, then leaves*"],
+    mad:["UNBELIEVABLE. I'm telling the app.","This is going on Nextdoor."] },
+  teen:{ name:'MACKENZLEIGH', skin:'#d8a078', shirt:'#66ddc8', hair:'#ff88cc', pat:0.9,
+    hi:["Okay so it's kind of a long order, sorry, not sorry, okay so—","It's for my whole group chat. They trust you. No pressure.","Can you make it 'aesthetic'? That's an ingredient, right?"],
+    bye:["Oh my gosh WAIT. This slaps.","You understood the vibe. Rare.","*takes 14 photos of the cup*"],
+    mad:["The group chat is gonna hear about this."] },
+  influencer:{ name:'MADISYN', skin:'#e0a888', shirt:'#ffffff', hair:'#c07030', pat:0.85, film:true,
+    hi:["Keep making it — this is CONTENT.","Say hi to my followers. Anyway, my order:","POV: you're making my drink and 40,000 people are watching."],
+    bye:["Comments are gonna LOVE you.","I'm tagging this place. You're welcome and I'm sorry.","*whispers to camera* he did that."],
+    mad:["Aaand THAT's the sound of an unfollow. From me. To a coffee shop."] },
+  laptop:{ name:'DEREK', skin:'#d8b090', shirt:'#8a8a9a', hair:'#554433', pat:1.2,
+    hi:["Refill on the free water. Also, did the wifi password change?","I've been at table 4 since Tuesday. Anyway—","One drink. I'll nurse it for six hours. It's my craft."],
+    bye:["Back to the screenplay. It's about a barista, actually.","Cheers. See you at closing. And opening.","*returns to table 4, his homeland*"],
+    mad:["Fine. I'll write you as the villain."] },
+  mom:{ name:"BRAXTON'S MOM", skin:'#e8b898', shirt:'#88aadd', hair:'#443322', pat:0.8,
+    hi:["It's for the carpool. All of it. Every item is load-bearing.","Braxton bit someone today so this needs to be PERFECT.","Quick! I left four children in a moving vehicle. Kidding. Mostly."],
+    bye:["You have saved lives today. Small, loud lives.","Bless you. BLESS you.","*sprints to a minivan idling diagonally*"],
+    mad:["The carpool will remember this."] },
+  cop:{ name:'OFFICER DAN', skin:'#d8a078', shirt:'#3a4a6a', hair:'#222222', pat:1.3,
+    hi:["Large drip. And whatever that kid did, I saw it.","Coffee. I've been up since the incident. Don't ask about the incident.","One coffee. Officer discount is me smiling. Here it is."],
+    bye:["Stay out of trouble. Statistically impossible here, but try.","*taps brim of hat*","Good work, citizen."],
+    mad:["I'm not mad. I'm just... noting it. Officially."] },
+};
+
+/* ---------- family texts ---------- */
+const FAMTEXTS = [
+  {from:'WIFE ❤️', msg:"bring home milk. COW milk. if you bring oat milk again we're getting divorced (joking) (mostly)", reply:"cow. got it. love you 🐄"},
+  {from:'WIFE ❤️', msg:"your daughter drew you at work. you're the cup. we're framing it", reply:"I AM the cup ❤️"},
+  {from:'MOM', msg:"andy did you eat. blink twice into the security camera", reply:"*blinks twice* yes mom"},
+  {from:'WIFE ❤️', msg:"kids made you a 'world's best barista' medal out of a coaster. act surprised at dinner", reply:"rehearsing my gasp rn"},
+  {from:'DAD', msg:"your mother says hi. that's it. that's the text", reply:"hi mom. hi dad 👍"},
+  {from:'WIFE ❤️', msg:"the baby said 'latte' before 'dada'. we don't have to tell people that", reply:"we're telling EVERYONE"},
+  {from:'MOM', msg:"saw a boy your age at church who plays golf with his brother-in-law. anyway love you", reply:"MOM."},
+  {from:'WIFE ❤️', msg:"family dinner saturday. your mom's making the thing. THE thing.", reply:"THE thing?? I'm there ❤️"},
+];
+
+/* Spencer's mid-shift texts (Saturday) */
+const SPENCETEXTS = [
+  {from:'SPENCER 🏌️', msg:"tee time in 90 min. I'm wearing the matching polos. BOTH of them. one is for you", reply:"working, bro 😔"},
+  {from:'SPENCER 🏌️', msg:"the cart girl asked where my friend is. I said he's ascending in the coffee industry", reply:"tell her I said hi"},
+];
+
+/* ---------- between-shift golf chats ---------- */
+const CHATS = [
+  { pre:["yo. saturday. tee time 8:40am. GolfyBoys ride again?? 🏌️","I already have a good feeling about my back nine. that's how you KNOW"],
+    opts:["can't man — family dinner. my mom's making The Thing","Deb's got me opening. the beans wait for no man","honest answer? I'm so tired, Spencer. I dream in foam"],
+    post:["a family dinner. on a SATURDAY. six days from now. incredible planning. ok 👍","'The Thing.' sure. THE THING. must be nice. I mean hard. must be hard bro"] },
+  { pre:["update: found a coupon. the cart is FREE bro. FREE. CART.","this is basically the golf gods texting you through me"],
+    opts:["Deborah left a 1-star review with FOOTNOTES. I can't leave town","the kids made me a medal. I have to go get medaled","if I smell grass instead of espresso my body will shut down"],
+    post:["got it. footnotes beat 18 holes. totally normal ranking","must be hard having a family that loves you or whatever 🙄"] },
+  { pre:["new offer: I will CADDY for you. I will carry your bags like a beautiful mule","I've been practicing saying 'nice shot, sir'. I have it down"],
+    opts:["there was an incident with the oat milk today, Spencer. I can't talk about it","wife says the baby said 'latte' before 'dada'. I'm needed at home","you'd really caddy for me?? ...no. no I can't. family."],
+    post:["you almost said yes. I FELT it. the mule offer stands","the baby said LATTE?? even the baby is against golf"] },
+  { pre:["I'm starting a foundation. Golfers Without Partners. you're the face of the cause","the brochure is just a photo of me pointing at an empty cart seat"],
+    opts:["madisyn the influencer filmed my breakdown today. I'm 'content' now","my hands do latte art in my sleep. my wife filmed it. I whisk","dinner at my mom's. attendance is not optional. love is a schedule"],
+    post:["donating one (1) prayer to your recovery. tee time still 8:40 👍","'love is a schedule' is the saddest thing a groomsman has ever texted me"] },
+  { pre:["TOMORROW. 8:40am. one spot open. no pressure.","(pressure)","(so much pressure)"],
+    opts:["Deb scheduled me a Saturday DOUBLE. inspection AND rush","family dinner is tomorrow night. if I miss The Thing I'm out of the will","Spencer. brother. one day I will golf again. today is not that day"],
+    post:["ok. I'll be on hole 1 at 8:40. alone. hydrated. emotionally? unclear","'one day.' writing that on my scorecard for morale"] },
+];
+
+/* ---------- fail tips ---------- */
+const TIPS = [
+  "A latte with twelve shots isn't a drink, it's a cry for help. Charge for the cry.",
+  "The customer is always right, legally, in ways that mean nothing here.",
+  "Decaf after a rude comment is a war crime. It is also standard practice.",
+  "If the order changes mid-pour, the tip should too. It won't.",
+  "You can't spell 'barista' without 'bar', which is where the debrief happens.",
+  "Steam wand first, questions never.",
+  "Every 'extra hot' has a story. Do not ask for the story.",
+  "The tip jar labeled 'college fund' works better if you look tired. You will not need to act.",
+];
+const FAILTITLES = [
+  "ANDY STEPPED INTO THE WALK-IN TO SCREAM",
+  "ANDY ASKED THE ESPRESSO MACHINE 'AND WHAT ABOUT MY DREAMS?'",
+  "ANDY STARTED STEAMING MILK THAT WASN'T THERE",
+  "ANDY LAMINATED HIS OWN RESIGNATION, THEN FILED IT UNDER 'SOMEDAY'",
+];
+const FINE = [
+  "No golf was played in the making of this game. Or ever, apparently.",
+  "Any resemblance to actual brothers-in-law is 100% intentional.",
+  "Oat milk sold separately. Cow milk sold emotionally.",
+  "Brewtal Grounds is an equal-opportunity stressor.",
+  "Side effects include foam dreams, phantom steam-wand hand, and declining tee times.",
+];
+
+/* ---------- levels ---------- */
+const LEVELS = [
+  { day:'MONDAY', sub:'OPENING SHIFT', dur:70, spawn:[6.5,9], drain:0.026, len:[2,3],
+    pool:['shot','milk','foam','ice'], archs:['joe','bro','laptop'], texts:[FAMTEXTS[0]],
+    nameOnly:0, change:0, memory:0, wave:0,
+    intro:"First shift of the week. The machine is warm. You are not ready. No one is ever ready." },
+  { day:'TUESDAY', sub:'THE DEBORAH INCIDENT', dur:75, spawn:[5.5,8], drain:0.031, len:[3,4],
+    pool:['shot','milk','foam','ice','car'], archs:['joe','bro','laptop','karen','mom'], texts:[FAMTEXTS[1],FAMTEXTS[2]],
+    nameOnly:0, change:0.15, memory:0, wave:0,
+    intro:"Deborah is coming. You can feel it in the foam. She documented last time." },
+  { day:'WEDNESDAY', sub:'RUSH HOUR', dur:80, spawn:[5,7.5], drain:0.035, len:[3,5],
+    pool:['shot','milk','foam','ice','car','oat'], archs:['joe','bro','laptop','karen','mom','cop'], texts:[FAMTEXTS[3],FAMTEXTS[4]],
+    nameOnly:0, change:0.3, memory:0, wave:1,
+    intro:"There's a bus stop outside. At some point the bus arrives. Pray it's empty. It won't be." },
+  { day:'THURSDAY', sub:'CONTENT DAY', dur:85, spawn:[4.5,7], drain:0.04, len:[4,5],
+    pool:['shot','milk','foam','ice','car','oat','whip'], archs:['bro','karen','mom','teen','influencer','laptop'], texts:[FAMTEXTS[5]],
+    nameOnly:0.3, change:0.3, memory:5, wave:0,
+    intro:"Madisyn is filming today. Also, regulars now order BY NAME — the chalkboard knows the recipes. And your memory? Getting tested. Orders fade. Tap a customer to ask again (they hate it)." },
+  { day:'FRIDAY', sub:'INSPECTION DAY', dur:90, spawn:[4,6.5], drain:0.045, len:[4,6],
+    pool:INGKEYS, archs:['joe','bro','karen','mom','teen','influencer','cop'], texts:[FAMTEXTS[6]],
+    nameOnly:0.35, change:0.35, memory:4.5, wave:1, debra:true,
+    intro:"DEB is on the floor with a clipboard. Every mistake counts DOUBLE. She can hear foam being wrong." },
+  { day:'SATURDAY', sub:'THE TEE TIME', dur:100, spawn:[3.5,5.5], drain:0.052, len:[4,6],
+    pool:INGKEYS, archs:['joe','bro','karen','mom','teen','influencer','cop','laptop'], texts:[FAMTEXTS[7],SPENCETEXTS[0],SPENCETEXTS[1]],
+    nameOnly:0.4, change:0.4, memory:4, wave:2, spencer:true,
+    intro:"8:40am tee time. 8:00am church crowd. Somewhere, Spencer is stretching alone. Tonight: family dinner. The Thing. Survive." },
+];
+
+/* ---------- state ---------- */
+let state = null, phase='menu', last=0, floats=[], particles=[], ticker={t:'',time:0};
+function freshState(lvl){ return {
+  lvl:lvl||0, stress:0, tips:0,
+  stats: JSON.parse(localStorage.getItem('mbhb_stats')||'{"served":0,"dumped":0,"walkouts":0,"texts":0,"declined":0,"tips":0}'),
+};}
+function saveProg(){ localStorage.setItem('mbhb_lvl', state.lvl); localStorage.setItem('mbhb_stats', JSON.stringify(state.stats)); }
+
+/* shift-local */
+let sh = null;
+function startShift(i){
+  const L = LEVELS[i];
+  state.lvl = i; state.stress = Math.min(state.stress, 40); saveProg();
+  sh = { L, t:L.dur, custs:[], spawnT:2.5, cup:[], lock:0, textq:[...L.texts], textT:rnd(14,22),
+         card:null, waveDone:0, spencerDone:false, shake:0, debraX:640, debraDir:-1, over:false };
+  ticker = {t: L.day+' — '+L.sub, time:4};
+  hideAll(); phase='shift'; updateCup();
+}
+
+/* ---------- customers ---------- */
+function makeCust(special){
+  const L = sh.L;
+  if(special==='spencer'){
+    return { arch:{name:'SPENCER', skin:'#e8b088', shirt:'#4a8a4a', hair:'#5a3a22', pat:0.9,
+      hi:["one round of golf. to go. you have 20 seconds"], bye:[], mad:["fine. must be hard, bro. 🏌️"]},
+      spencer:true, order:['golf'], idx:0, pat:1, x:W+60, tx:0, st:'in', reveal:99, quip:"", quipT:0 };
+  }
+  const key = pick(L.archs), a = ARCH[key];
+  let order, nameOnly=false, bname='';
+  if(a.joe){ order=['shot']; }
+  else if(Math.random()<L.nameOnly){ const b=pick(BOARD); order=[...b.r]; nameOnly=true; bname=b.n; }
+  else {
+    const n = ri(L.len[0], L.len[1]); order=[];
+    order.push(Math.random()<0.15?'decaf':'shot');
+    for(let k=1;k<n;k++){ let it; do{ it=pick(L.pool); }while(it===order[k-1]&&Math.random()<0.6); order.push(it); }
+  }
+  return { arch:a, key, order, idx:0, pat:1, x:W+60, tx:0, st:'in', nameOnly, bname,
+    reveal: L.memory? L.memory : 999, changed:false,
+    quip: pick(a.hi), quipT:5 };
+}
+function frontCust(){ return sh.custs.find(c=>c.st==='wait'); }
+
+/* ---------- core actions ---------- */
+function pressIng(key){
+  if(phase!=='shift'||sh.lock>0||sh.over) return;
+  const f = frontCust();
+  if(!f){ ticker={t:"ANDY: ...no one ordered anything. I'm just steaming to feel something.",time:2.5}; S.press(); return; }
+  if(f.spencer){ ticker={t:"You cannot brew golf.",time:2.5}; S.wrong(); return; }
+  S.press(); steam();
+  if(key===f.order[f.idx]){
+    sh.cup.push(key); f.idx++;
+    if(f.idx>=f.order.length){ serveCust(f); }
+    else if(!f.changed && Math.random()<sh.L.change && f.idx>=1){
+      f.changed=true; const extra=pick(sh.L.pool||INGKEYS);
+      f.order.push(extra); f.reveal=Math.max(f.reveal,2.5);
+      ticker={t:f.arch.name+': "ACTUALLY— add '+ING[extra].n+'. I contain multitudes."',time:3};
+      addStress(2); S.buzz();
+    }
+  } else {
+    // wrong = dump the whole cup
+    sh.cup=[]; f.idx=0; S.wrong(); sh.shake=0.35;
+    let hit = 6 * (sh.L.debra?2:1);
+    addStress(hit); state.stats.dumped++;
+    floats.push({x:450,y:300,t:'WRONG! START OVER '+(sh.L.debra?'(DEB SAW ×2)':''),c:'#ff6655',life:1.4});
+    if(f.arch.film){ addStress(3); ticker={t:"MADISYN: 'chat, he's struggling. like AND subscribe.'",time:2.5}; }
+  }
+  updateCup();
+}
+function serveCust(f){
+  S.serve();
+  const tip = Math.max(0.25, Math.round((f.order.length*0.75 + f.pat*2.5)*4)/4);
+  state.tips+=tip; state.stats.tips+=tip; state.stats.served++;
+  addStress(f.arch.joe? -10 : -3);
+  f.st='leave'; f.quip=pick(f.arch.bye); f.quipT=3;
+  ticker={t:f.arch.name+': "'+f.quip+'"', time:2.8};
+  sh.cup=[]; updateCup();
+  floats.push({x:f.x,y:210,t:'+$'+tip.toFixed(2),c:'#7ddc7d',life:1.3});
+  setTimeout(S.tip,120);
+  if(f.arch.joe) floats.push({x:f.x,y:180,t:'bless him  −10 stress',c:'#9ad0ff',life:1.6});
+}
+function addStress(n){
+  state.stress = Math.max(0, Math.min(100, state.stress+n));
+  if(state.stress>=100 && phase==='shift'){ meltdown(); }
+}
+function meltdown(){
+  phase='fail'; S.melt(); dismissCard(true);
+  $('failtitle').textContent = pick(FAILTITLES);
+  $('failsub').textContent = sh.L.day+' claimed another good man. The shift restarts. The stress does not follow you. (Lucky.)';
+  $('failtip').textContent = pick(TIPS);
+  $('fail').classList.add('show');
+}
+function steam(){ for(let i=0;i<4;i++) particles.push({x:180+rnd(-6,6),y:330,vy:-rnd(30,60),vx:rnd(-8,8),life:rnd(.4,.9)}); }
+
+/* ---------- in-shift text messages ---------- */
+function showCard(tx){
+  sh.card={tx, t:7};
+  $('tcfrom').textContent=tx.from; $('tcmsg').textContent=tx.msg;
+  $('tcbtn').textContent='↩ "'+tx.reply+'"';
+  $('textcard').classList.add('show'); S.buzz();
+}
+function dismissCard(silent){
+  if(!sh||!sh.card) return;
+  $('textcard').classList.remove('show'); sh.card=null;
+  if(!silent){}
+}
+$('tcbtn').addEventListener('click',()=>{
+  if(!sh||!sh.card) return;
+  const spence = sh.card.tx.from.includes('SPENCER');
+  state.stats.texts++;
+  addStress(spence? -2 : -8);
+  floats.push({x:640,y:380,t:spence?'declined golf, again  −2':'family = serotonin  −8',c:'#7ddc7d',life:1.6});
+  if(spence) state.stats.declined++;
+  sh.lock=0.9; dismissCard(); S.serve();
+});
+
+/* ---------- update loop ---------- */
+function update(dt){
+  if(phase!=='shift'||sh.over) return;
+  const L=sh.L;
+  sh.t-=dt; if(sh.lock>0)sh.lock-=dt; if(sh.shake>0)sh.shake-=dt;
+  if(ticker.time>0)ticker.time-=dt;
+
+  // shift end
+  if(sh.t<=0){ endShift(); return; }
+
+  // spawn
+  sh.spawnT-=dt;
+  const maxQ = 4;
+  if(sh.spawnT<=0 && sh.custs.filter(c=>c.st!=='leave').length<maxQ){
+    sh.custs.push(makeCust()); sh.spawnT=rnd(L.spawn[0],L.spawn[1]);
+  }
+  // waves
+  if(L.wave>=1 && sh.waveDone<1 && sh.t < L.dur*0.55){
+    sh.waveDone=1; for(let i=0;i<3;i++) sh.custs.push(makeCust());
+    ticker={t:L.wave===2?"THE CHURCH CROWD HAS ARRIVED. GOD HELP YOU. THEY WON'T.":"THE BUS. THE BUS IS HERE.",time:3}; S.buzz();
+  }
+  if(L.wave>=2 && sh.waveDone<2 && sh.t < L.dur*0.3){
+    sh.waveDone=2; for(let i=0;i<3;i++) sh.custs.push(makeCust());
+    ticker={t:"SECOND SERVICE LET OUT EARLY.",time:3}; S.buzz();
+  }
+  // spencer cameo
+  if(L.spencer && !sh.spencerDone && sh.t < L.dur*0.5){
+    sh.spencerDone=true; sh.custs.push(makeCust('spencer'));
+    ticker={t:"...is that SPENCER? in golf pants? in the LINE?",time:3.5};
+  }
+  // texts
+  if(sh.textq.length && !sh.card){ sh.textT-=dt; if(sh.textT<=0){ showCard(sh.textq.shift()); sh.textT=rnd(16,26); } }
+  if(sh.card){ sh.card.t-=dt; $('tcringf').style.width=Math.max(0,sh.card.t/7*100)+'%';
+    if(sh.card.t<=0){ const spence=sh.card.tx.from.includes('SPENCER'); dismissCard(true);
+      addStress(spence?6:12); S.wrong();
+      floats.push({x:640,y:380,t:spence?'ignored spencer +6':'IGNORED FAMILY +12 GUILT',c:'#ff6655',life:1.8}); } }
+
+  // customers: walk in from the right, queue extends right of the counter
+  let qi=0;
+  for(const c of sh.custs){
+    if(c.st==='in'){ c.tx = 470 + qi*95; if(c.x>c.tx) c.x-=180*dt; else { c.x=c.tx; c.st='wait'; if(qi===0&&L.memory)c.reveal=L.memory; } qi++; }
+    else if(c.st==='wait'){ c.tx = 470 + qi*95; if(Math.abs(c.x-c.tx)>2) c.x += (c.tx-c.x)*3*dt; qi++; }
+    else if(c.st==='leave'){ c.x += 220*dt; }
+    if(c.quipT>0)c.quipT-=dt;
+    if(c.reveal>0)c.reveal-=dt;
+  }
+  qi=0;
+  for(const c of sh.custs){ if(c.st==='wait'){ const front=qi===0;
+      if(front && !c.greeted){ c.greeted=true; ticker={t:c.arch.name+': "'+c.quip+'"', time:3.2}; }
+      c.pat -= L.drain/(c.arch.pat||1) * (front?1:0.45) * dt * 1.6; qi++;
+      if(c.pat<=0){
+        c.st='leave'; c.quip=pick(c.arch.mad); c.quipT=3;
+        ticker={t:c.arch.name+': "'+c.quip+'"', time:3};
+        if(c.spencer){ floats.push({x:c.x,y:200,t:'"must be hard, bro."',c:'#e8b04b',life:2.4}); }
+        else { S.walkout(); addStress(15*(L.debra?1.5:1)); state.stats.walkouts++; sh.shake=0.3;
+          floats.push({x:c.x,y:200,t:'WALKOUT +15',c:'#ff6655',life:1.5});
+          if(frontCust()===undefined){ sh.cup=[]; updateCup(); } }
+      } } }
+  sh.custs = sh.custs.filter(c=>!(c.st==='leave'&&c.x>W+80));
+  // if front changed, clear cup progress mismatch
+  const f=frontCust();
+  if(f && sh.cup.length!==f.idx){ sh.cup=f.order.slice(0,f.idx); updateCup(); }
+
+  // idle stress decay
+  if(!f) addStress(-0.9*dt);
+
+  // debra pacing
+  if(L.debra){ sh.debraX += sh.debraDir*30*dt; if(sh.debraX<430){sh.debraDir=1;} if(sh.debraX>700){sh.debraDir=-1;} }
+
+  // particles/floats
+  for(const p of particles){ p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; }
+  particles=particles.filter(p=>p.life>0);
+  for(const fl of floats){ fl.y-=26*dt; fl.life-=dt; }
+  floats=floats.filter(fl=>fl.life>0);
+}
+
+function endShift(){
+  sh.over=true; dismissCard(true); S.win();
+  const i=state.lvl;
+  saveProg();
+  if(i>=LEVELS.length-1){ setTimeout(showEnding,700); }
+  else setTimeout(()=>showInter(i),700);
+}
+
+/* ---------- between-shift golf chat ---------- */
+function showInter(i){
+  phase='inter';
+  const chat = CHATS[i] || CHATS[CHATS.length-1];
+  const el=$('inter'); el.innerHTML='';
+  const ph=document.createElement('div'); ph.className='phone';
+  ph.innerHTML='<div class="phead">GOLFY BOYS 🏌️ — SPENCER</div>';
+  el.appendChild(ph); el.classList.add('show');
+  const head=document.createElement('div');
+  head.className='sub'; head.style.marginBottom='4px';
+  head.innerHTML='<b style="color:#e8b04b">'+LEVELS[i].day+' SURVIVED</b> · tips $'+state.tips.toFixed(2)+' · stress carried home: '+Math.round(state.stress)+'%';
+  el.insertBefore(head, ph);
+  let bi=0;
+  const addBub=(txt,cls)=>{ const b=document.createElement('div'); b.className='bub '+cls; b.textContent=txt; ph.appendChild(b); ph.scrollTop=1e5; };
+  const step=()=>{ if(bi<chat.pre.length){ addBub(chat.pre[bi++],'them'); S.buzz(); setTimeout(step,900); } else showOpts(); };
+  const showOpts=()=>{
+    chat.opts.forEach(o=>{ const btn=document.createElement('button'); btn.className='copt'; btn.textContent='↩ '+o;
+      btn.onclick=()=>{ ph.querySelectorAll('.copt').forEach(x=>x.remove());
+        addBub(o,'me'); state.stats.declined++; S.serve();
+        setTimeout(()=>{ addBub(pick(chat.post),'them'); S.buzz();
+          const nb=document.createElement('button'); nb.className='btn'; nb.style.width='100%'; nb.style.marginTop='10px';
+          nb.textContent='NEXT SHIFT → '+LEVELS[i+1].day;
+          nb.onclick=()=>{ startShift(i+1); showIntro(i+1); };
+          ph.appendChild(nb);
+        },1000); };
+      ph.appendChild(btn); });
+  };
+  setTimeout(step,500);
+}
+function showIntro(i){ ticker={t:LEVELS[i].intro, time:6}; }
+
+/* ---------- ending ---------- */
+function showEnding(){
+  phase='end';
+  const el=$('end'); el.classList.add('show');
+  el.innerHTML =
+    '<h2>SATURDAY, 5:58 PM</h2>'+
+    '<div class="sub" style="max-width:460px">Apron off. Hands still doing phantom latte art.<br>Two places you could drive right now:</div>'+
+    '<div id="endstage">'+
+      '<button class="btn ghost" id="golfbtn">⛳ BACK NINE W/ SPENCER</button>'+
+      '<button class="btn" id="fambtn">🍗 FAMILY DINNER (THE THING)</button>'+
+    '</div>'+
+    '<div class="fine" id="endhint">choose. if you can.</div>';
+  let dodges=0;
+  const g=$('golfbtn'), stage=$('endstage');
+  const dodge=()=>{ dodges++;
+    if(dodges>=5){ g.disabled=true; g.style.opacity=.35; g.textContent='⛳ you know you can\'t'; $('endhint').textContent='the golf button has accepted what you cannot say.'; return; }
+    g.style.left=rnd(2,55)+'%'; g.style.top=rnd(0,100)+'px'; S.walkout();
+    $('endhint').textContent=['it moved.','it moved again.','your own hand refuses.','the button knows about The Thing.'][Math.min(dodges-1,3)];
+  };
+  g.addEventListener('pointerenter',dodge); g.addEventListener('touchstart',(e)=>{e.preventDefault();dodge();},{passive:false});
+  g.addEventListener('click',(e)=>{ e.preventDefault(); dodge(); });
+  $('fambtn').onclick=epilogue;
+}
+function epilogue(){
+  S.win(); const st=state.stats;
+  $('end').innerHTML =
+    '<h2>THE THING WAS DELICIOUS</h2>'+
+    '<div class="sub" style="max-width:470px">You are medaled with a coaster. Your daughter presents the drawing.<br>You ARE the cup. It\'s beautiful. Your phone buzzes once:</div>'+
+    '<div class="phone" style="margin:6px 0"><div class="phead">SPENCER 🏌️</div>'+
+      '<div class="bub them">hole 1. alone again. saw a dad teaching his kid to putt and thought of you.</div>'+
+      '<div class="bub them">enjoy The Thing. must be hard, bro. 🏌️😔</div>'+
+      '<div class="bub me">next season, Spencer. I promise. tell the cart girl I said hi</div></div>'+
+    '<div class="stamp">MUST BE HARD, BRO™</div>'+
+    '<div class="statline">☕ drinks served: '+st.served+' &nbsp;·&nbsp; 🗑 cups dumped: '+st.dumped+'</div>'+
+    '<div class="statline">😤 walkouts: '+st.walkouts+' &nbsp;·&nbsp; 💬 family texts answered: '+st.texts+'</div>'+
+    '<div class="statline">⛳ golf invites declined: '+st.declined+' &nbsp;·&nbsp; 💵 career tips: $'+st.tips.toFixed(2)+'</div>'+
+    '<button class="btn" onclick="location.reload()" style="margin-top:14px">NEW WEEK (WHY)</button>'+
+    '<div class="fine">Brewtal Grounds thanks you for your service. Spencer does not.</div>';
+  localStorage.removeItem('mbhb_lvl');
+}
+
+/* ---------- drawing ---------- */
+function rr(x,y,w,h,r){ cx.beginPath(); cx.roundRect(x,y,w,h,r); }
+function drawPerson(x,y,c,scale){
+  const s=scale||1;
+  cx.fillStyle=c.shirt; rr(x-16*s,y-28*s,32*s,44*s,8*s); cx.fill();           // body
+  cx.fillStyle=c.skin; cx.beginPath(); cx.arc(x,y-44*s,14*s,0,7); cx.fill();  // head
+  cx.fillStyle=c.hair; cx.beginPath(); cx.arc(x,y-49*s,13*s,Math.PI,0); cx.fill();
+  cx.fillStyle='#241a12'; rr(x-13*s,y+14*s,10*s,16*s,3); cx.fill(); rr(x+3*s,y+14*s,10*s,16*s,3); cx.fill();
+  cx.fillStyle='#241a12'; cx.beginPath(); cx.arc(x-5*s,y-45*s,1.8*s,0,7); cx.arc(x+5*s,y-45*s,1.8*s,0,7); cx.fill();
+}
+function draw(){
+  cx.save();
+  if(sh&&sh.shake>0) cx.translate(rnd(-4,4),rnd(-3,3));
+  // room
+  cx.fillStyle='#3a2b20'; cx.fillRect(0,0,W,H);
+  cx.fillStyle='#2a1f18'; cx.fillRect(0,360,W,H-360);            // floor
+  cx.fillStyle='#241a12'; cx.fillRect(0,352,W,10);
+  // window
+  cx.fillStyle='#7fb0d8'; rr(700,60,160,120,8); cx.fill();
+  cx.fillStyle='rgba(255,255,255,.5)'; cx.fillRect(700,110,160,4); cx.fillRect(776,60,4,120);
+  cx.fillStyle='#5a8a4a'; cx.fillRect(700,150,160,30); // grass outside. golf-adjacent. painful.
+  // chalkboard
+  cx.fillStyle='#1e2a1e'; rr(40,44,300,150,6); cx.fill(); cx.strokeStyle='#6b5238'; cx.lineWidth=6; cx.strokeRect(40,44,300,150);
+  cx.fillStyle='#f0e6a0'; cx.font='bold 15px Courier New'; cx.fillText('☰ BREWTAL GROUNDS ☰',86,66);
+  cx.font='11px Courier New'; cx.fillStyle='#d8e8c8';
+  BOARD.forEach((b,i)=>{ cx.fillText(b.n.padEnd(13,' ')+' '+b.r.map(k=>ING[k].e).join(''), 56, 86+i*15); });
+  // counter
+  cx.fillStyle='#5a3f28'; cx.fillRect(60,330,340,26);
+  cx.fillStyle='#4a3320'; cx.fillRect(60,356,340,90);
+  // espresso machine
+  cx.fillStyle='#8a8f96'; rr(130,268,110,64,8); cx.fill();
+  cx.fillStyle='#6a6f76'; rr(140,278,90,20,4); cx.fill();
+  cx.fillStyle='#d33'; cx.beginPath(); cx.arc(220,310,5,0,7); cx.fill();
+  // tip jar
+  cx.fillStyle='rgba(200,230,255,.25)'; rr(320,300,34,32,4); cx.fill();
+  cx.strokeStyle='rgba(200,230,255,.5)'; cx.lineWidth=2; cx.strokeRect(320,300,34,32);
+  cx.fillStyle='#c9a876'; cx.font='9px Courier New'; cx.fillText('COLLEGE',321,346); cx.fillText('FUND(?)',323,356);
+
+  // ANDY
+  const stress=state?state.stress:0;
+  const andyC={skin:'#e8b088', shirt: stress>75?'#a03a2a':'#3a6a4a', hair:'#5a3a22'};
+  const tw = stress>60? Math.sin(Date.now()/40)*(stress-60)/22 : 0;
+  drawPerson(200+tw,318,andyC,1.05);
+  cx.fillStyle='#e8e0d0'; rr(184+tw,296,34,32,4); cx.fill(); // apron
+  cx.fillStyle='#241a12'; cx.font='8px Courier New'; cx.fillText('ANDY',192+tw,314);
+  if(stress>50){ cx.fillStyle='#9ad0ff'; for(let i=0;i<Math.floor((stress-40)/20);i++){ cx.beginPath(); cx.arc(214+tw+i*6, 268+ (Date.now()/60+i*30)%20, 2.5,0,7); cx.fill(); } }
+
+  // DEBRA
+  if(sh&&sh.L.debra&&phase==='shift'){ drawPerson(sh.debraX,430,{skin:'#f0c0a0',shirt:'#333340',hair:'#404048'},0.95);
+    cx.fillStyle='#fff'; rr(sh.debraX+12,398,16,22,2); cx.fill();
+    cx.fillStyle='#a8a8c0'; cx.font='10px Courier New'; cx.fillText('DEB 📋',sh.debraX-16,470); }
+
+  // customers
+  if(sh) { let qi=0;
+    for(const c of sh.custs){
+      const front = c.st==='wait' && qi===0;
+      drawPerson(c.x, 320, c.arch, 1);
+      if(c.spencer){ cx.fillStyle='#fff'; cx.font='9px Courier New'; cx.fillText('GOLFY',c.x-14,306); cx.fillText('BOYS',c.x-11,316); }
+      // name
+      cx.fillStyle='#c9a876'; cx.font='10px Courier New'; cx.textAlign='center'; cx.fillText(c.arch.name,c.x,352); cx.textAlign='left';
+      if(c.st==='wait'){
+        // patience bar
+        cx.fillStyle='#241a12'; cx.fillRect(c.x-22,236,44,7);
+        cx.fillStyle=c.pat>0.5?'#7ddc7d':(c.pat>0.25?'#e8b04b':'#ff6655'); cx.fillRect(c.x-22,236,44*Math.max(0,c.pat),7);
+        // order bubble (front only shows full)
+        if(front){
+          const showIcons = c.reveal>0 || c.spencer;
+          cx.fillStyle='#f2e8dc'; const bw = Math.max(90, c.order.length*26+18);
+          rr(c.x-bw/2,180,bw,44,10); cx.fill();
+          cx.beginPath(); cx.moveTo(c.x-8,224); cx.lineTo(c.x+8,224); cx.lineTo(c.x,236); cx.fill();
+          cx.font='20px serif'; cx.textAlign='center';
+          if(c.spencer){ cx.fillText('⛳🏌️', c.x, 210); }
+          else if(c.nameOnly && !c.changed){ cx.fillStyle='#241a12'; cx.font='bold 13px Courier New'; cx.fillText('1 '+c.bname, c.x, 200);
+            cx.font='10px Courier New'; cx.fillStyle='#8a7a66'; cx.fillText('(it\'s on the board)', c.x, 215); }
+          else if(showIcons){ let ox=c.x-(c.order.length-1)*13;
+            c.order.forEach((k,i)=>{ cx.globalAlpha = i<c.idx?0.28:1; cx.fillText(ING[k].e, ox+i*26, 212); cx.globalAlpha=1;
+              if(i<c.idx){ cx.fillStyle='#2e7d4f'; cx.font='bold 12px Courier New'; cx.fillText('✓',ox+i*26,190); cx.font='20px serif'; } });
+          } else { cx.fillStyle='#8a7a66'; cx.font='bold 16px Courier New'; cx.fillText('❓ ❓ ❓',c.x,208);
+            cx.font='9px Courier New'; cx.fillText('(tap them to ask again)',c.x,220); }
+          cx.textAlign='left';
+        } else { cx.fillStyle='rgba(242,232,220,.6)'; rr(c.x-16,198,32,22,8); cx.fill();
+          cx.fillStyle='#241a12'; cx.font='bold 12px Courier New'; cx.textAlign='center'; cx.fillText('...',c.x,213); cx.textAlign='left'; }
+        qi++;
+      }
+    }
+  }
+
+  // particles (steam)
+  cx.fillStyle='rgba(255,255,255,.5)';
+  for(const p of particles){ cx.globalAlpha=p.life; cx.beginPath(); cx.arc(p.x,p.y,3,0,7); cx.fill(); } cx.globalAlpha=1;
+
+  // floats
+  cx.font='bold 14px Courier New'; cx.textAlign='center';
+  for(const fl of floats){ cx.globalAlpha=Math.min(1,fl.life); cx.fillStyle=fl.c; cx.fillText(fl.t,fl.x,fl.y); }
+  cx.globalAlpha=1; cx.textAlign='left';
+
+  // HUD
+  if(state){
+    cx.fillStyle='rgba(0,0,0,.45)'; cx.fillRect(0,0,W,34);
+    cx.font='bold 13px Courier New'; cx.fillStyle='#e8b04b';
+    if(sh) cx.fillText(sh.L.day+' · '+sh.L.sub, 12, 22);
+    // stress bar
+    cx.fillStyle='#c9a876'; cx.fillText('STRESS',388,22);
+    cx.fillStyle='#241a12'; cx.fillRect(455,10,200,15);
+    const sc = state.stress<50?'#7ddc7d':(state.stress<80?'#e8b04b':'#ff5544');
+    cx.fillStyle=sc; cx.fillRect(455,10,200*state.stress/100,15);
+    if(state.stress>80){ cx.fillStyle='#fff'; cx.font='bold 10px Courier New'; cx.fillText('DO NOT',505,21); }
+    cx.font='bold 13px Courier New';
+    cx.fillStyle='#7ddc7d'; cx.fillText('$'+state.tips.toFixed(2), 672, 22);
+    if(sh){ cx.fillStyle='#f2e8dc'; const m=Math.floor(Math.max(0,sh.t)/60), s2=Math.floor(Math.max(0,sh.t)%60);
+      cx.fillText('⏱ '+m+':'+(s2<10?'0':'')+s2, 760, 22); }
+  }
+  // ticker
+  if(ticker.time>0 && ticker.t){ cx.fillStyle='rgba(0,0,0,.6)'; cx.fillRect(0,H-30,W,30);
+    cx.fillStyle='#f0e6a0'; cx.font='bold 13px Courier New'; cx.textAlign='center';
+    cx.fillText(ticker.t, W/2, H-10); cx.textAlign='left'; }
+  cx.restore();
+}
+
+/* ---------- cup UI ---------- */
+function updateCup(){
+  $('cupicons').textContent = sh? sh.cup.map(k=>ING[k].e).join(' ') : '';
+}
+
+/* ---------- pad ---------- */
+const padEl=$('pad');
+INGKEYS.forEach((k,i)=>{
+  const b=document.createElement('button'); b.className='ing';
+  b.innerHTML='<span class="e">'+ING[k].e+'</span>'+ING[k].n+' <span style="opacity:.4">['+(i+1)+']</span>';
+  b.addEventListener('pointerdown',e=>{e.preventDefault(); pressIng(k);});
+  padEl.appendChild(b);
+});
+window.addEventListener('keydown',e=>{ const n=parseInt(e.key); if(n>=1&&n<=8) pressIng(INGKEYS[n-1]); });
+
+/* menu board toggle */
+$('menubtn').addEventListener('click',()=>{
+  const b=$('board');
+  if(b.classList.contains('show')){ b.classList.remove('show'); return; }
+  b.innerHTML='<b>☰ THE BOARD ☰</b><br>'+BOARD.map(x=>'<b>'+x.n+'</b> = '+x.r.map(k=>ING[k].e).join(' ')).join('<br>');
+  b.classList.add('show'); S.peek();
+  setTimeout(()=>b.classList.remove('show'),4000);
+});
+
+/* tap customer to re-peek order (memory levels) */
+cv.addEventListener('pointerdown',e=>{
+  if(phase!=='shift'||!sh) return;
+  const r=cv.getBoundingClientRect(), mx=(e.clientX-r.left)*W/r.width, my=(e.clientY-r.top)*H/r.height;
+  const f=frontCust();
+  if(f && Math.abs(mx-f.x)<40 && my>230 && my<350 && f.reveal<=0){
+    f.reveal=1.6; f.pat=Math.max(0,f.pat-0.06); S.peek();
+    ticker={t:f.arch.name+': "AGAIN? okay. ONE more time."',time:2};
+  }
+});
+
+/* ---------- overlays / flow ---------- */
+function hideAll(){ document.querySelectorAll('.ovl').forEach(o=>o.classList.remove('show')); $('board').classList.remove('show'); }
+$('startbtn').addEventListener('click',()=>{ ac(); state=freshState(0); localStorage.removeItem('mbhb_lvl');
+  localStorage.removeItem('mbhb_stats'); state=freshState(0); startShift(0); showIntro(0); });
+$('retrybtn').addEventListener('click',()=>{ state.stress=30; startShift(state.lvl); showIntro(state.lvl); });
+const savedLvl = parseInt(localStorage.getItem('mbhb_lvl')||'-1');
+if(savedLvl>0){ const cb=$('contbtn'); cb.style.display='inline-block';
+  cb.textContent='CONTINUE — '+LEVELS[savedLvl].day;
+  cb.addEventListener('click',()=>{ ac(); state=freshState(savedLvl); startShift(savedLvl); showIntro(savedLvl); }); }
+$('menufine').textContent = pick(FINE);
+
+/* ---------- main loop ---------- */
+function loop(ts){
+  const dt=Math.min(0.05,(ts-last)/1000)||0.016; last=ts;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
