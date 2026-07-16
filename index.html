@@ -127,6 +127,7 @@ function computeLayout(){
       andy:{x:128,y:counterY-10,s:1.15},
       custY, qx:330, qgap:88, patY, bubY:patY-88, bubH:64,
       debY:H-80, debMin:56, debMax:270, debInit:180,
+      spl:{x:265,y:custY+46}, warnY:92,
       cx:W/2, cy:Math.round(H*0.5) };
   } else {
     LY={ port:false, f:1, cs:1, floorY:360, counterY:330,
@@ -138,6 +139,7 @@ function computeLayout(){
       andy:{x:200,y:318,s:1.05},
       custY:320, qx:470, qgap:95, patY:236, bubY:180, bubH:44,
       debY:430, debMin:430, debMax:700, debInit:640,
+      spl:{x:430,y:400}, warnY:52,
       cx:450, cy:300 };
   }
   if(typeof sh!=='undefined' && sh && sh.debraX!==undefined)
@@ -168,6 +170,8 @@ const S = {
   melt:()=>{[440,392,330,262,196].forEach((f,i)=>setTimeout(()=>beep(f,.3,'sawtooth',.09),i*180)); hiss(1.2,.08);},
   win:()=>{[523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.22,'square',.08),i*130));},
   peek:()=>beep(980,.06,'triangle',.06),
+  alarm:()=>{beep(880,.13,'square',.09); setTimeout(()=>beep(660,.13,'square',.09),150); setTimeout(()=>beep(880,.16,'square',.09),300);},
+  clunk:()=>{beep(140,.12,'square',.08); hiss(.08,.04);},
 };
 
 /* ---------- ingredients ---------- */
@@ -286,29 +290,72 @@ const FINE = [
   "Side effects include foam dreams, phantom steam-wand hand, and declining tee times.",
 ];
 
+/* ---------- disasters ---------- */
+const DIS = [
+  { id:'jam', dur:6, short:'MACHINE JAMMED', block:['shot','decaf'],
+    ann:"⚠ THE ESPRESSO MACHINE IS MAKING THE NOISE AGAIN ⚠",
+    end:"percussive maintenance has worked. for now." },
+  { id:'oat', dur:8, short:'NO OAT MILK', block:['oat'],
+    ann:"⚠ WE ARE OUT OF OAT MILK. TELL NO ONE. ⚠",
+    end:"found an emergency oat carton behind the mop. crisis averted." },
+  { id:'card', dur:8, short:'CASH ONLY',
+    ann:"⚠ CARD READER DOWN. CASH ONLY. NOBODY HAS CASH. ⚠",
+    end:"the card reader has been turned off and on again. capitalism resumes." },
+  { id:'steam', dur:4, short:'SENTIENT STEAM WAND',
+    ann:"⚠ THE STEAM WAND HAS ACHIEVED SENTIENCE ⚠",
+    end:"the steam wand has calmed down. it wants to be called 'Jeff' now." },
+  { id:'spill', dur:10, short:'FLOOR LAVA — TAP THE SPILL!',
+    ann:"⚠ SOMEONE DROPPED AN ICED OCTUPLE. THE FLOOR IS LAVA. ⚠",
+    end:"the floor is mopped. Andy is a hero. no one noticed." },
+  { id:'bee', dur:9, short:'BEE ALERT (it wants the caramel)',
+    ann:"⚠ A BEE HAS ENTERED THE ESTABLISHMENT. IT WANTS THE CARAMEL. ⚠",
+    end:"the bee left. it gave the place 5 stars." },
+];
+function setBlocked(keys,on){ INGKEYS.forEach((k,i)=>{ if(keys&&keys.includes(k)){ const b=$('pad').children[i]; if(b) b.style.opacity=on?0.3:''; } }); }
+function triggerDisaster(){
+  const avail = DIS.filter(d=>!sh.usedDis.includes(d.id));
+  const def = pick(avail.length?avail:DIS);
+  sh.usedDis.push(def.id);
+  sh.dis = { def, t:def.dur };
+  addStress(6); S.alarm(); sh.shake=0.4;
+  ticker = { t:def.ann, time:3 };
+  if(def.id==='steam'){ for(let i=0;i<50;i++) particles.push({x:LY.steam.x+rnd(-30,30),y:LY.steam.y+rnd(-20,10),vy:-rnd(40,120),vx:rnd(-50,50),life:rnd(.5,1.6)});
+    for(const c of sh.custs) if(c.st==='wait') c.pat=Math.max(0.05,c.pat-0.12); }
+  if(def.id==='spill') sh.spill = { taps:3 };
+  if(def.block) setBlocked(def.block,true);
+}
+function endDisaster(hero){
+  if(!sh.dis) return;
+  const def=sh.dis.def;
+  if(def.block) setBlocked(def.block,false);
+  ticker = { t: hero? "MOPPED. −4 stress. Andy is a hero. no one noticed." : def.end, time:3 };
+  if(hero) addStress(-4);
+  sh.spill=null; sh.dis=null;
+}
+
 /* ---------- levels ---------- */
 const LEVELS = [
-  { day:'MONDAY', sub:'OPENING SHIFT', dur:30, spawn:[6.5,9], drain:0.026, len:[2,3],
+  { day:'MONDAY', sub:'OPENING SHIFT', dur:30, dis:0, spawn:[6.5,9], drain:0.026, len:[2,3],
     pool:['shot','milk','foam','ice'], archs:['joe','bro','laptop'], texts:[FAMTEXTS[0]],
     nameOnly:0, change:0, memory:0, wave:0,
     intro:"First shift of the week. The machine is warm. You are not ready. No one is ever ready." },
-  { day:'TUESDAY', sub:'THE DEBORAH INCIDENT', dur:30, spawn:[5.5,8], drain:0.031, len:[3,4],
+  { day:'TUESDAY', sub:'THE DEBORAH INCIDENT', dur:30, dis:1, spawn:[5.5,8], drain:0.031, len:[3,4],
     pool:['shot','milk','foam','ice','car'], archs:['joe','bro','laptop','karen','mom'], texts:[FAMTEXTS[1],FAMTEXTS[2]],
     nameOnly:0, change:0.15, memory:0, wave:0,
     intro:"Deborah is coming. You can feel it in the foam. She documented last time." },
-  { day:'WEDNESDAY', sub:'RUSH HOUR', dur:30, spawn:[5,7.5], drain:0.035, len:[3,5],
+  { day:'WEDNESDAY', sub:'RUSH HOUR', dur:30, dis:1, spawn:[5,7.5], drain:0.035, len:[3,5],
     pool:['shot','milk','foam','ice','car','oat'], archs:['joe','bro','laptop','karen','mom','cop'], texts:[FAMTEXTS[3],FAMTEXTS[4]],
     nameOnly:0, change:0.3, memory:0, wave:1,
     intro:"There's a bus stop outside. At some point the bus arrives. Pray it's empty. It won't be." },
-  { day:'THURSDAY', sub:'CONTENT DAY', dur:30, spawn:[4.5,7], drain:0.04, len:[4,5],
+  { day:'THURSDAY', sub:'CONTENT DAY', dur:45, dis:2, spawn:[4.5,7], drain:0.04, len:[4,5],
     pool:['shot','milk','foam','ice','car','oat','whip'], archs:['bro','karen','mom','teen','influencer','laptop'], texts:[FAMTEXTS[5]],
     nameOnly:0.3, change:0.3, memory:5, wave:0,
     intro:"Madisyn is filming today. Also, regulars now order BY NAME — the chalkboard knows the recipes. And your memory? Getting tested. Orders fade. Tap a customer to ask again (they hate it)." },
-  { day:'FRIDAY', sub:'INSPECTION DAY', dur:30, spawn:[4,6.5], drain:0.045, len:[4,6],
+  { day:'FRIDAY', sub:'INSPECTION DAY', dur:60, dis:2, spawn:[4,6.5], drain:0.045, len:[4,6],
     pool:INGKEYS, archs:['joe','bro','karen','mom','teen','influencer','cop'], texts:[FAMTEXTS[6]],
     nameOnly:0.35, change:0.35, memory:4.5, wave:1, debra:true,
     intro:"DEB is on the floor with a clipboard. Every mistake counts DOUBLE. She can hear foam being wrong." },
-  { day:'SATURDAY', sub:'THE TEE TIME', dur:30, spawn:[3.5,5.5], drain:0.052, len:[4,6],
+  { day:'SATURDAY', sub:'THE TEE TIME', dur:75, dis:3, spawn:[3.5,5.5], drain:0.046, len:[4,6],
     pool:INGKEYS, archs:['joe','bro','karen','mom','teen','influencer','cop','laptop'], texts:[FAMTEXTS[7],SPENCETEXTS[0],SPENCETEXTS[1]],
     nameOnly:0.4, change:0.4, memory:4, wave:2, spencer:true,
     intro:"8:40am tee time. 8:00am church crowd. Somewhere, Spencer is stretching alone. Tonight: family dinner. The Thing. Survive." },
@@ -328,7 +375,14 @@ function startShift(i){
   const L = LEVELS[i];
   state.lvl = i; state.stress = Math.min(state.stress, 40); saveProg();
   sh = { L, t:L.dur, custs:[], spawnT:2, cup:[], lock:0, textq:[...L.texts], textT:rnd(5,10),
-         card:null, waveDone:0, spencerDone:false, shake:0, debraX:LY?LY.debInit:640, debraDir:-1, over:false };
+         card:null, waveDone:0, spencerDone:false, shake:0, debraX:LY?LY.debInit:640, debraDir:-1, over:false,
+         dis:null, usedDis:[], spill:null, disq:[] };
+  // schedule disasters: spread through the shift, min 8s apart
+  for(let d=0; d<(L.dis||0); d++){ let tt, tries=0;
+    do{ tt=rnd(L.dur*0.2, L.dur*0.85); tries++; }while(tries<20 && sh.disq.some(x=>Math.abs(x-tt)<8));
+    sh.disq.push(tt); }
+  sh.disq.sort((a,b)=>a-b);
+  setBlocked(INGKEYS,false);
   ticker = {t: L.day+' — '+L.sub, time:4};
   hideAll(); phase='shift'; updateCup();
 }
@@ -359,6 +413,12 @@ function frontCust(){ return sh.custs.find(c=>c.st==='wait'); }
 /* ---------- core actions ---------- */
 function pressIng(key){
   if(phase!=='shift'||sh.lock>0||sh.over) return;
+  // disaster interference
+  if(sh.dis && sh.dis.def.block && sh.dis.def.block.includes(key)){
+    S.clunk(); addStress(1);
+    ticker={t:sh.dis.def.id==='jam'?"ANDY: it's JAMMED. it's SO jammed.":"ANDY: we're OUT. how are we OUT.",time:2}; return; }
+  if(sh.dis && sh.dis.def.id==='bee' && key==='car'){
+    addStress(3); floats.push({x:LY.jar.x+17,y:LY.jar.y-14,t:'THE BEE!! +3',c:'#e8b04b',life:1.3}); }
   const f = frontCust();
   if(!f){ ticker={t:"ANDY: ...no one ordered anything. I'm just steaming to feel something.",time:2.5}; S.press(); return; }
   if(f.spencer){ ticker={t:"You cannot brew golf.",time:2.5}; S.wrong(); return; }
@@ -384,13 +444,14 @@ function pressIng(key){
 }
 function serveCust(f){
   S.serve();
-  const tip = Math.max(0.25, Math.round((f.order.length*0.75 + f.pat*2.5)*4)/4);
+  let tip = Math.max(0.25, Math.round((f.order.length*0.75 + f.pat*2.5)*4)/4);
+  if(sh.dis && sh.dis.def.id==='card'){ tip=0; floats.push({x:f.x,y:LY.bubY+52,t:'(card reader) $0.00',c:'#ff6655',life:1.4}); }
   state.tips+=tip; state.stats.tips+=tip; state.stats.served++;
   addStress(f.arch.joe? -8 : -2);
   f.st='leave'; f.quip=pick(f.arch.bye); f.quipT=3;
   ticker={t:f.arch.name+': "'+f.quip+'"', time:2.8};
   sh.cup=[]; updateCup();
-  floats.push({x:f.x,y:LY.bubY+30,t:'+$'+tip.toFixed(2),c:'#7ddc7d',life:1.3});
+  if(tip>0) floats.push({x:f.x,y:LY.bubY+30,t:'+$'+tip.toFixed(2),c:'#7ddc7d',life:1.3});
   setTimeout(S.tip,120);
   if(f.arch.joe) floats.push({x:f.x,y:LY.bubY,t:'bless him  −8 stress',c:'#9ad0ff',life:1.6});
 }
@@ -459,6 +520,10 @@ function update(dt){
     sh.spencerDone=true; sh.custs.push(makeCust('spencer'));
     ticker={t:"...is that SPENCER? in golf pants? in the LINE?",time:3.5};
   }
+  // disasters
+  if(!sh.dis && sh.disq.length && (L.dur - sh.t) >= sh.disq[0]){ sh.disq.shift(); triggerDisaster(); }
+  if(sh.dis){ sh.dis.t-=dt; if(sh.dis.t<=0) endDisaster(false); }
+
   // texts
   if(sh.textq.length && !sh.card){ sh.textT-=dt; if(sh.textT<=0){ showCard(sh.textq.shift()); sh.textT=rnd(7,11); } }
   if(sh.card){ sh.card.t-=dt; $('tcringf').style.width=Math.max(0,sh.card.t/7*100)+'%';
@@ -478,7 +543,7 @@ function update(dt){
   qi=0;
   for(const c of sh.custs){ if(c.st==='wait'){ const front=qi===0;
       if(front && !c.greeted){ c.greeted=true; ticker={t:c.arch.name+': "'+c.quip+'"', time:3.2}; }
-      c.pat -= L.drain/(c.arch.pat||1) * (front?1:0.45) * dt * 1.6; qi++;
+      c.pat -= L.drain/(c.arch.pat||1) * (front?1:0.45) * (sh.spill?1.4:1) * dt * 1.6; qi++;
       if(c.pat<=0){
         c.st='leave'; c.quip=pick(c.arch.mad); c.quipT=3;
         ticker={t:c.arch.name+': "'+c.quip+'"', time:3};
@@ -513,7 +578,7 @@ function update(dt){
 }
 
 function endShift(){
-  sh.over=true; dismissCard(true); S.win();
+  sh.over=true; dismissCard(true); setBlocked(INGKEYS,false); S.win();
   const i=state.lvl;
   saveProg();
   if(i>=LEVELS.length-1){ setTimeout(showEnding,700); }
@@ -696,6 +761,26 @@ function draw(){
     }
   }
 
+  // disaster set dressing
+  if(sh && sh.spill){
+    cx.fillStyle='rgba(150,110,60,.75)'; cx.beginPath(); cx.ellipse(A.spl.x,A.spl.y,44,16,0,0,7); cx.fill();
+    cx.fillStyle='rgba(200,230,255,.6)'; cx.beginPath(); cx.ellipse(A.spl.x-10,A.spl.y-3,12,5,0,0,7); cx.fill(); // the ice, melting judgmentally
+    const pulse=1+Math.sin(Date.now()/150)*0.15;
+    cx.fillStyle='#ffdd66'; cx.font='bold '+Math.round(13*A.f*pulse)+'px Courier New'; cx.textAlign='center';
+    cx.fillText('TAP ×'+sh.spill.taps, A.spl.x, A.spl.y-24); cx.textAlign='left';
+  }
+  if(sh && sh.dis && sh.dis.def.id==='bee'){
+    const bt=Date.now()/300;
+    cx.font=Math.round(16*A.f)+'px serif'; cx.textAlign='center';
+    cx.fillText('🐝', A.jar.x+17+Math.cos(bt)*34, A.jar.y-6+Math.sin(bt*1.7)*20); cx.textAlign='left';
+  }
+  // disaster warning line + red pulse
+  if(sh && sh.dis && phase==='shift'){
+    cx.fillStyle='#ff6655'; cx.font='bold '+Math.round(13*A.f)+'px Courier New'; cx.textAlign='center';
+    cx.fillText('⚠ '+sh.dis.def.short+' — '+Math.ceil(sh.dis.t)+'s', W/2, A.warnY); cx.textAlign='left';
+    if(sh.dis.t > sh.dis.def.dur-1.6){ cx.strokeStyle='rgba(255,60,40,'+(0.35+0.3*Math.sin(Date.now()/80))+')'; cx.lineWidth=10; cx.strokeRect(5,5,W-10,H-10); }
+  }
+
   // particles (steam)
   cx.fillStyle='rgba(255,255,255,.5)';
   for(const p of particles){ cx.globalAlpha=p.life; cx.beginPath(); cx.arc(p.x,p.y,3,0,7); cx.fill(); } cx.globalAlpha=1;
@@ -780,6 +865,13 @@ cv.addEventListener('pointerdown',e=>{
   const r=cv.getBoundingClientRect(), sc=Math.min(r.width/W, r.height/H);
   const ox=(r.width-W*sc)/2, oy=(r.height-H*sc)/2;
   const mx=(e.clientX-r.left-ox)/sc, my=(e.clientY-r.top-oy)/sc;
+  // mop the spill
+  if(sh.spill && Math.abs(mx-LY.spl.x)<60 && Math.abs(my-LY.spl.y)<44){
+    sh.spill.taps--; S.press(); sh.shake=0.12;
+    if(sh.spill.taps<=0){ endDisaster(true); }
+    else floats.push({x:LY.spl.x,y:LY.spl.y-36,t:'MOP ('+sh.spill.taps+' left)',c:'#9ad0ff',life:1});
+    return;
+  }
   const f=frontCust();
   if(f && Math.abs(mx-f.x)<40*LY.cs && my>LY.custY-90*LY.cs && my<LY.custY+40*LY.cs && f.reveal<=0){
     f.reveal=1.6; f.pat=Math.max(0,f.pat-0.06); S.peek();
