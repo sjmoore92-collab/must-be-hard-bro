@@ -2,21 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>MUST BE HARD, BRO™ — A Barista Stress Simulator</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; background:#14100e; color:#f2e8dc; font-family:"Courier New",monospace; overflow:hidden; touch-action:manipulation; }
+  body { height:100dvh; }
   #wrap { max-width:980px; margin:0 auto; height:100%; display:flex; flex-direction:column; padding:4px; }
-  #cvbox { position:relative; width:100%; flex:0 1 auto; }
-  canvas { width:100%; display:block; border-radius:10px; background:#2a1f18; }
-  #controls { flex:0 0 auto; padding-top:6px; }
+  #cvbox { position:relative; width:100%; flex:1 1 auto; min-height:0; border-radius:10px; overflow:hidden; background:#2a1f18; }
+  canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:block; }
+  #controls { flex:0 0 auto; padding:6px 0 calc(6px + env(safe-area-inset-bottom)); }
   #cuprow { display:flex; align-items:center; gap:8px; min-height:34px; padding:2px 6px; }
   #cupicons { font-size:20px; letter-spacing:3px; min-height:26px; }
   #cuplabel { font-size:11px; color:#c9a876; font-weight:bold; }
   #menubtn { margin-left:auto; background:#3b2c20; color:#e8cfa8; border:2px solid #6b5238; border-radius:8px; font-family:inherit; font-weight:bold; font-size:12px; padding:5px 10px; cursor:pointer; }
   #pad { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
-  .ing { background:#3b2c20; border:2px solid #6b5238; border-radius:10px; color:#f2e8dc; font-family:inherit; font-weight:bold; font-size:13px; padding:10px 2px; cursor:pointer; user-select:none; transition:transform .05s; }
+  .ing { background:#3b2c20; border:2px solid #6b5238; border-radius:10px; color:#f2e8dc; font-family:inherit; font-weight:bold; font-size:13px; padding:12px 2px; cursor:pointer; user-select:none; transition:transform .05s; }
   .ing:active { transform:scale(.93); background:#54402c; }
   .ing .e { font-size:20px; display:block; }
   .ovl { position:absolute; inset:0; background:rgba(12,8,6,.94); display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:18px; border-radius:10px; overflow-y:auto; z-index:10; }
@@ -29,7 +30,7 @@
   .btn.ghost { background:#3b2c20; color:#e8cfa8; box-shadow:0 4px 0 #1d1610; }
   .fine { font-size:10px; color:#7a6a56; margin-top:18px; max-width:460px; line-height:1.5; }
   /* phone / chat */
-  .phone { width:min(360px,92%); background:#101418; border:3px solid #2c3540; border-radius:22px; padding:14px 12px; text-align:left; }
+  .phone { width:min(360px,92%); max-height:72%; overflow-y:auto; background:#101418; border:3px solid #2c3540; border-radius:22px; padding:14px 12px; text-align:left; }
   .phead { text-align:center; font-size:12px; color:#8fa3b8; border-bottom:1px solid #2c3540; padding-bottom:8px; margin-bottom:10px; font-weight:bold; }
   .bub { max-width:85%; padding:8px 11px; border-radius:14px; margin:6px 0; font-size:13px; line-height:1.45; }
   .them { background:#25303c; color:#dbe7f2; border-bottom-left-radius:4px; }
@@ -693,7 +694,10 @@ $('menubtn').addEventListener('click',()=>{
 /* tap customer to re-peek order (memory levels) */
 cv.addEventListener('pointerdown',e=>{
   if(phase!=='shift'||!sh) return;
-  const r=cv.getBoundingClientRect(), mx=(e.clientX-r.left)*W/r.width, my=(e.clientY-r.top)*H/r.height;
+  // canvas is object-fit:contain — undo the letterbox before mapping to game coords
+  const r=cv.getBoundingClientRect(), sc=Math.min(r.width/W, r.height/H);
+  const ox=(r.width-W*sc)/2, oy=(r.height-H*sc)/2;
+  const mx=(e.clientX-r.left-ox)/sc, my=(e.clientY-r.top-oy)/sc;
   const f=frontCust();
   if(f && Math.abs(mx-f.x)<40 && my>230 && my<350 && f.reveal<=0){
     f.reveal=1.6; f.pat=Math.max(0,f.pat-0.06); S.peek();
